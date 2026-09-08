@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STUCK — Assistente</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; overflow:hidden;
+  background:#02080c; color:#7de9ff;
+  font-family:Arial,Helvetica,sans-serif;
+  display:flex; align-items:center; justify-content:center;
+}
+body:before{
+  content:""; position:fixed; inset:0;
+  background:
+    linear-gradient(rgba(40,210,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(40,210,255,.05) 1px,transparent 1px);
+  background-size:32px 32px;
+  pointer-events:none;
+}
+.app{width:min(100%,900px);height:100vh;position:relative;padding:18px}
+.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #14627a;padding-bottom:10px}
+.logo{font-size:26px;letter-spacing:6px;font-weight:bold;text-shadow:0 0 15px #27dfff}
+.status{font-size:12px;color:#63cfe6;letter-spacing:2px}
+.center{height:65%;display:flex;align-items:center;justify-content:center;position:relative}
+.core{
+ width:190px;height:190px;border-radius:50%;position:relative;
+ border:2px solid #51eaff;
+ box-shadow:0 0 15px #18cfff,0 0 60px rgba(0,210,255,.35),inset 0 0 30px rgba(0,210,255,.25);
+ animation:pulse 2s infinite ease-in-out;
+}
+.core:before,.core:after{content:"";position:absolute;border-radius:50%;inset:20px;border:1px dashed #41dfff}
+.core:after{inset:48px;border:4px solid #baf8ff;box-shadow:0 0 25px #37eaff}
+.ring{position:absolute;inset:-28px;border:1px solid #2bbfdf;border-radius:50%;border-left-color:transparent;border-right-color:transparent;animation:spin 5s linear infinite}
+.ring2{position:absolute;inset:-55px;border:1px dashed #197b99;border-radius:50%;animation:spin 9s linear infinite reverse}
+.label{position:absolute;bottom:-78px;width:100%;text-align:center;letter-spacing:4px;font-size:12px}
+.panel{position:absolute;left:18px;right:18px;bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{
+ background:rgba(4,30,40,.8);color:#8ceeff;border:1px solid #176e87;
+ padding:14px;border-radius:6px;font-size:14px;letter-spacing:1px;
+ box-shadow:0 0 10px rgba(0,190,255,.08);cursor:pointer
+}
+button:active{transform:scale(.98);background:rgba(10,70,85,.9)}
+.output{
+ position:absolute;top:65px;left:18px;right:18px;text-align:center;
+ font-size:14px;min-height:22px;text-shadow:0 0 8px #3bdfff
+}
+.mic{grid-column:1/-1;font-size:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{transform:scale(1.04);box-shadow:0 0 25px #18cfff,0 0 85px rgba(0,210,255,.5),inset 0 0 40px rgba(0,210,255,.35)}}
+@media(max-width:500px){.core{width:145px;height:145px}.core:before{inset:15px}.core:after{inset:37px}.ring{inset:-22px}.ring2{inset:-42px}.logo{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo">STUCK</div>
+    <div class="status" id="status">ONLINE • READY</div>
+  </div>
+  <div class="output" id="output">Sistema aguardando comando...</div>
+  <div class="center">
+    <div class="core">
+      <div class="ring"></div><div class="ring2"></div>
+      <div class="label">ASSISTENTE ATIVO</div>
+    </div>
+  </div>
+  <div class="panel">
+    <button class="mic" onclick="listen()">🎙️ ATIVAR STUCK</button>
+    <button onclick="say('Olá, senhor. Sistema funcionando normalmente.')">SISTEMA</button>
+    <button onclick="say('Estou pronto para receber seu comando.')">STATUS</button>
+    <button onclick="openSite('https://www.google.com')">GOOGLE</button>
+    <button onclick="say('Função em desenvolvimento.')">COMANDOS</button>
+  </div>
+</div>
+<script>
+const out=document.getElementById('output');
+const statusEl=document.getElementById('status');
+
+function say(text){
+  out.textContent=text;
+  if('speechSynthesis' in window){
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='pt-BR'; u.rate=.95;
+    speechSynthesis.speak(u);
+  }
+}
+function openSite(url){ location.href=url; }
+
+function listen(){
+  // Usa o reconhecimento de voz do Chrome diretamente.
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    say('O reconhecimento de voz não está disponível nesta página. Para usar o microfone com segurança, abra o STUCK por HTTPS ou localhost no Chrome.');
+    return;
+  }
+  const r=new SpeechRecognition();
+  r.lang='pt-BR'; r.interimResults=false; r.continuous=false;
+  statusEl.textContent='LISTENING • OUVINDO';
+  out.textContent='Diga "Stuck" e depois seu comando...';
+  r.start();
+  r.onresult=e=>{
+    const text=e.results[0][0].transcript.toLowerCase();
+    statusEl.textContent='ONLINE • READY';
+    if(text.includes('stuck')){
+      const command=text.replace('stuck','').trim();
+      if(command) say('Sim, senhor. Comando recebido: '+command);
+      else say('Sim, senhor. Estou ouvindo.');
+    }else{
+      say('Palavra de ativação não reconhecida.');
+    }
+  };
+  r.onerror=()=>{statusEl.textContent='ONLINE • READY';say('Não consegui ouvir. Tente novamente.');};
+  r.onend=()=>statusEl.textContent='ONLINE • READY';
+}
+</script>
+</body>
+</html>
